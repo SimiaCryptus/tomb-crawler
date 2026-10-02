@@ -17,6 +17,8 @@ export class Hud {
     this.floaters = $('floaters');
     this.hurtEl = $('hurt-flash');
     this.slots = [...document.querySelectorAll('#inventory .slot')];
+    this.fpLeft = $('fp-left');
+    this.fpRight = $('fp-right');
     this.cache = {};
 
     this.multRing.style.strokeDasharray = String(CIRC);
@@ -25,6 +27,15 @@ export class Hud {
     deploy.addEventListener('click', () => { deploy.blur(); game.deploy(); });
     const pause = $('pause-btn');
     pause.addEventListener('click', () => { pause.blur(); game.togglePause(); });
+
+    // First-person left/right turn controls.
+    const turn = (el, d) => el.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      el.blur();
+      game.turnRelative(d);
+    });
+    turn(this.fpLeft, -1);
+    turn(this.fpRight, 1);
   }
 
   show(v) { this.root.classList.toggle('hidden', !v); }
@@ -54,6 +65,18 @@ export class Hud {
       this.multRing.style.strokeDashoffset = String(CIRC * (1 - m.fraction));
     }
 
+    // Queued first-person turn indicator.
+    let side = 0;
+    const p = g.player;
+    if (g.firstPerson && p.buffered >= 0) {
+      const d = (p.buffered - p.facing + 6) % 6;
+      side = d === 1 || d === 2 ? 1 : d === 4 || d === 5 ? -1 : 0;
+    }
+    this._set('fpQueued', side, (v) => {
+      this.fpLeft.classList.toggle('queued', v < 0);
+      this.fpRight.classList.toggle('queued', v > 0);
+    });
+
     const inv = g.inventory;
     DEVICE_TYPES.forEach((t, i) => {
       const n = inv.counts[t];
@@ -70,6 +93,7 @@ export class Hud {
   floater(text, x, z, cls) {
     if (this.root.classList.contains('hidden')) return;
     const p = this.game.renderer.project(x, 1.2, z);
+    if (!p) return;
     const el = document.createElement('div');
     el.className = 'floater ' + cls;
     el.textContent = text;

@@ -91,3 +91,21 @@ body.touch-left #hud-br { right: auto; left: 14px; flex-direction: row-reverse; 
 .newbest { color: #7dff8a; font-weight: bold; margin-bottom: 6px; }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 10px 0; }
 .row select, .row input { flex: 0 0 55%; font-family: inherit; }
+.row > span { text-align: left; }
+.row em { font-style: normal; font-size: 12px; opacity: .7; margin-left: 4px; }
+.panel { max-height: 92vh; overflow-y: auto; }
+.panel h3 { margin: 14px 0 4px; font-size: 14px; color: #ffcf5a; text-align: left; opacity: .85; }
+/* First-person turn controls */
+#fp-controls {
+  position: absolute; left: 14px; bottom: max(14px, env(safe-area-inset-bottom));
+  display: none; gap: 10px;
+}
+body.fp #fp-controls { display: flex; }
+body.touch-left #fp-controls { left: auto; right: 14px; }
+#fp-controls button {
+  width: 70px; height: 70px; border-radius: 50%; font-size: 26px;
+  border: 3px solid rgba(255, 220, 150, .45); background: rgba(40, 24, 10, .7); color: #f3e2c0;
+  touch-action: none;
+}
+#fp-controls button:active { transform: scale(.94); }
+#fp-controls button.queued { border-color: #7dff8a; box-shadow: 0 0 14px rgba(125, 255, 138, .6); }

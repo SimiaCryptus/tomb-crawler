@@ -4,6 +4,7 @@ import { Loop } from './Loop.js';
 import { randomSeed, dailySeed } from './Rng.js';
 import { World } from '../world/World.js';
 import { CELL, ITEM, PICKUP } from '../world/Chunk.js';
+import { getGenerator, generatorForSeed, DEFAULT_GENERATOR } from '../world/gen/registry.js';
 import { Player } from '../entities/Player.js';
 import { EnemyManager } from '../entities/EnemyManager.js';
 import { DeviceManager } from '../items/Devices.js';
@@ -18,19 +19,33 @@ import { Input } from '../input/Input.js';
 import { Hud } from '../ui/Hud.js';
 import { Screens } from '../ui/Screens.js';
 import { AudioFx } from '../audio/Audio.js';
-import { distance, toWorld, dirVector, key } from '../hex/Hex.js';
+import { distance, toWorld, dirVector, dirAngle, key } from '../hex/Hex.js';
 
 const LS_KEY = 'tombCrawler.v1';
 const PICKUP_LABEL = {
   [PICKUP.BOMB]: '+Bomb', [PICKUP.INCENDIARY]: '+Incendiary', [PICKUP.SHAPED]: '+Shaped charge',
   [PICKUP.MULT2]: '×2!', [PICKUP.MULT3]: '×3!', [PICKUP.ANKH]: '+Life',
 };
+const CAMERA_MODES = ['perspective', 'ortho', 'fps'];
+
+const viewDefaults = () => ({
+  tilt: CONFIG.CAMERA.tilt,
+  distance: CONFIG.CAMERA.distance,
+  fov: CONFIG.CAMERA.fov,
+  fpFov: CONFIG.CAMERA.fpFov,
+  wallHeight: CONFIG.VIEW.wallHeight,
+  fog: 1,
+});
 
 export class Game {
   constructor() {
     this.events = new EventBus();
     this.store = this._load();
-    this.settings = Object.assign({ volume: 0.7, camera: 'perspective', touch: 'right' }, this.store.settings || {});
+    this.settings = Object.assign(
+      { volume: 0.7, camera: 'perspective', touch: 'right', generator: DEFAULT_GENERATOR },
+      viewDefaults(),
+      this.store.settings || {},
+    );
 
     this.renderer = new Renderer(document.getElementById('canvas-host'));
     this.assets = new Assets();
@@ -59,6 +74,8 @@ export class Game {
     this.loop.start();
   }
 
+  get firstPerson() { return this.settings.camera === 'fps'; }
+
   // ---------- persistence ----------
   _load() {
     try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; }
@@ -69,11 +86,31 @@ export class Game {
 
   applySettings(s, save = true) {
     this.settings = { ...this.settings, ...s };
-    this.audio.setVolume(Number(this.settings.volume));
-    this.renderer.setMode(this.settings.camera === 'ortho' ? 'ortho' : 'persp');
-    document.body.classList.toggle('touch-left', this.settings.touch === 'left');
-    this.store.settings = this.settings;
+    const st = this.settings;
+    this.audio.setVolume(Number(st.volume));
+    const mode = st.camera === 'ortho' ? 'ortho' : st.camera === 'fps' ? 'fps' : 'persp';
+    this.renderer.setMode(mode);
+    this.renderer.setView({
+      tilt: Number(st.tilt), distance: Number(st.distance), fov: Number(st.fov),
+      fpFov: Number(st.fpFov), fog: Number(st.fog),
+    });
+    const wh = Number(st.wallHeight);
+    if (Number.isFinite(wh) && wh > 0 && wh !== this.assets.wallHeight) {
+      this.assets.wallHeight = wh;
+      for (const v of this.chunkViews.values()) if (v.chunk.data) v.build();
+    }
+    document.body.classList.toggle('touch-left', st.touch === 'left');
+    document.body.classList.toggle('fp', mode === 'fps');
+    if (this.player) this.player.autoCorner = this._autoCorner();
+    this.store.settings = st;
     if (save) this._save();
+  }
+
+  _autoCorner() { return this.firstPerson && CONFIG.FIRST_PERSON.autoCorner; }
+
+  cycleCamera() {
+    const i = CAMERA_MODES.indexOf(this.settings.camera);
+    this.applySettings({ camera: CAMERA_MODES[(i + 1) % CAMERA_MODES.length] });
   }
 
   // ---------- run lifecycle ----------
@@ -85,8 +122,12 @@ export class Game {
 
     this.seed = seed;
     this.daily = daily;
-    this.world = new World(seed);
+    this.generatorId = daily || this.settings.generator === 'random'
+      ? generatorForSeed(seed)
+      : getGenerator(this.settings.generator).id;
+    this.world = new World(seed, this.generatorId);
     this.player = new Player(0, 0);
+    this.player.autoCorner = this._autoCorner();
     this.effects = { fire: new FireGrid(), mult: new Multiplier() };
     this.inventory = new Inventory();
     this.devices = new DeviceManager(this);
@@ -115,6 +156,10 @@ export class Game {
       case 'resume': if (this.state === 'paused') this.setState('playing'); break;
       case 'quit': this.newRun(randomSeed(), false); this.setState('title'); break;
       case 'settings': this.screens.fillSettings(this.settings); this.screens.show('settings'); break;
+      case 'settings-reset-view':
+        this.applySettings(viewDefaults());
+        this.screens.fillSettings(this.settings);
+        break;
       case 'settings-back': this.setState(this.state); break;
     }
   }
@@ -126,6 +171,16 @@ export class Game {
 
   // ---------- player commands ----------
   queueDir(d) { if (this.state === 'playing') this.player.queue(d); }
+
+  // First-person relative command: -1 left, +1 right, 0 forward, 3 turn back.
+  turnRelative(delta) {
+    if (this.state !== 'playing') return;
+    const p = this.player;
+    let base = p.facing;
+    if ((delta === 1 || delta === -1) && p.buffered >= 0) base = p.buffered;
+    p.queue((base + delta + 6) % 6, CONFIG.FIRST_PERSON.turnBuffer);
+  }
+
   selectSlot(i) { this.inventory.select(i); }
   cycleSlot() { this.inventory.cycle(); }
 
@@ -296,6 +351,7 @@ export class Game {
     this.screens.fillGameOver({
       score: this.score, best: this.store.best || 0, dist: this.stats.maxDist, bonus,
       coins: this.stats.coins, wasted: this.stats.wasted, kills: this.stats.kills, newBest,
+      layout: getGenerator(this.generatorId).name,
     });
     this.audio.gameOver();
     this.setState('gameover');
@@ -368,9 +424,14 @@ export class Game {
     const p = this.player;
     const [fq, fr] = p.floatPos();
     const [x, z] = toWorld(fq, fr);
-    let dx = 0, dz = 0;
-    if (p.moving && p.dir >= 0) [dx, dz] = dirVector(p.dir);
-    this.renderer.follow(x, z, dx, dz, dt);
+    if (this.firstPerson) {
+      const bob = p.moving ? Math.sin(t * 15) * 0.03 : 0;
+      this.renderer.followFirstPerson(x, z, dirAngle(p.facing), dt, bob);
+    } else {
+      let dx = 0, dz = 0;
+      if (p.moving && p.dir >= 0) [dx, dz] = dirVector(p.dir);
+      this.renderer.follow(x, z, dx, dz, dt);
+    }
     this.renderer.setTorch(x, z, t);
     this._updateFireLight(t);
     this.hud.update();

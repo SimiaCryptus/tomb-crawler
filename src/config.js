@@ -16,11 +16,8 @@ export const CONFIG = {
   SCORE: { coin: 10, pile: 50, enemy: 100, wall: 5, distanceBonus: 2 },
 
   GEN: {
-    portalChance: 0.3,
-    loopRatio: 0.15,
+    // shared
     pocketChance: 0.45,
-    chambers: [0, 2],
-    bigChamberChance: 0.3,
     crackedBase: 0.05,
     crackedPerTier: 0.012,
     crackedMax: 0.2,
@@ -31,6 +28,34 @@ export const CONFIG = {
     ankhChance: 0.1,
     originChamberRadius: 2,
     originSafeRadius: 8,
+    edgePortals: [1, 3],       // openings per shared chunk edge (catacombs, caverns)
+    widePortalChance: 0.35,    // chance an opening is 2 cells wide
+
+    // lattice generator
+    portalChance: 0.3,
+    loopRatio: 0.15,
+    chambers: [0, 2],
+    bigChamberChance: 0.3,
+
+    catacombs: {
+      grid: 3,                 // rooms laid out on a grid x grid lattice per chunk
+      roomChance: 0.75,
+      hexRoomChance: 0.6,
+      maxRoomRadius: 2,
+      maxRoomSize: 4,
+      jitter: 2.5,             // randomness when picking spanning-tree edges
+      extraCorridors: [1, 3],
+      alcoves: [2, 5],
+    },
+
+    caverns: {
+      fill: 0.55,              // initial floor probability
+      steps: 4,                // cellular automaton iterations
+      wallAt: 4,               // become wall with >= this many wall neighbours
+      floorAt: 2,              // become floor with <= this many wall neighbours
+      minRegion: 5,            // isolated blobs smaller than this are filled in
+      pillarChance: 0.08,
+    },
   },
 
   DIFFICULTY: {
@@ -68,6 +93,19 @@ export const CONFIG = {
     mult3:        { base: 5,  perTier: 0.5 },
   },
 
-  CAMERA: { fov: 50, distance: 19, tilt: 55, damping: 5, lookAhead: 1.8, orthoHeight: 20 },
-  VIEW: { fogNear: 16, fogFar: 38, maxPixelRatio: 2 },
+  // Defaults for the user-adjustable view settings (see Settings screen).
+  CAMERA: {
+    fov: 50, distance: 19, tilt: 55, damping: 5, lookAhead: 1.8, orthoHeight: 20,
+    fpFov: 75,             // first-person field of view
+    eyeHeight: 0.75,       // first-person eye height
+    fpBack: 0.3,           // first-person camera offset behind the cell centre
+    fpPitch: 0.1,          // slight downward look
+    fpTurnDamping: 10,
+  },
+  VIEW: { fogNear: 16, fogFar: 38, fpFogNear: 1.5, fpFogFar: 15, wallHeight: 1.4, maxPixelRatio: 2 },
+
+  FIRST_PERSON: {
+    turnBuffer: 1.2,       // seconds a relative turn stays queued
+    autoCorner: true,      // follow single-exit bends instead of stopping
+  },
 };

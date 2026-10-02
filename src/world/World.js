@@ -1,12 +1,14 @@
 import { CONFIG } from '../config.js';
 import { Chunk, isWalkableType } from './Chunk.js';
 import { buildChunk } from './Populator.js';
+import { DEFAULT_GENERATOR } from './gen/registry.js';
 
 const S = CONFIG.CHUNK_SIZE;
 
 export class World {
-  constructor(seed) {
+  constructor(seed, generator = DEFAULT_GENERATOR) {
     this.seed = seed >>> 0;
+    this.generator = generator;
     this.chunks = new Map();
     this.activeKeys = new Set();
     this._last = null;
@@ -18,7 +20,7 @@ export class World {
     const k = cq + ',' + cr;
     let c = this.chunks.get(k);
     if (!c) { c = new Chunk(cq, cr); this.chunks.set(k, c); }
-    if (!c.data) c.load(buildChunk(this.seed, cq, cr));
+    if (!c.data) c.load(buildChunk(this.seed, cq, cr, this.generator));
     return c;
   }
 

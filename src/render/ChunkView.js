@@ -82,7 +82,7 @@ export class ChunkView {
         const h = hash32(gq(i), gr(i), 7) / 4294967296;
         _pos.set(x, 0, z);
         _quat.identity();
-        _scl.set(1, 0.85 + h * 0.4, 1);
+        _scl.set(1, A.wallHeight * (0.85 + h * 0.4), 1);
         _m.compose(_pos, _quat, _scl);
         m.setMatrixAt(k, _m);
       });

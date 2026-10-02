@@ -1,4 +1,11 @@
 const KEY_DIRS = { KeyD: 0, KeyX: 1, KeyC: 1, KeyZ: 2, KeyA: 3, KeyQ: 4, KeyW: 4, KeyE: 5 };
+// First-person relative commands: -1 left, +1 right, 0 forward, 3 turn back.
+const FP_KEYS = {
+  ArrowLeft: -1, KeyA: -1, KeyQ: -1,
+  ArrowRight: 1, KeyD: 1, KeyE: 1,
+  ArrowUp: 0, KeyW: 0,
+  ArrowDown: 3, KeyS: 3, KeyX: 3,
+};
 const SWIPE_MIN = 22;
 
 // Keyboard + touch/mouse swipes → game commands.
@@ -7,6 +14,7 @@ export class Input {
     this.game = game;
     this.lastH = 0; // last horizontal direction (0 = E, 3 = W) for arrow-key combos
     this.active = false;
+    this.fired = false;
     this.pid = -1;
     this.sx = 0; this.sy = 0;
 
@@ -14,6 +22,7 @@ export class Input {
 
     el.addEventListener('pointerdown', (e) => {
       this.active = true;
+      this.fired = false;
       this.pid = e.pointerId;
       this.sx = e.clientX; this.sy = e.clientY;
     });
@@ -21,6 +30,14 @@ export class Input {
       if (!this.active || e.pointerId !== this.pid) return;
       const dx = e.clientX - this.sx, dy = e.clientY - this.sy;
       if (Math.hypot(dx, dy) < SWIPE_MIN) return;
+      if (this.game.firstPerson) {
+        // One relative command per gesture.
+        if (this.fired) return;
+        this.fired = true;
+        const rel = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : -1) : (dy < 0 ? 0 : 3);
+        this.game.turnRelative(rel);
+        return;
+      }
       // Camera looks toward -z with no yaw: screen right = +x, screen down = +z.
       const a = Math.atan2(dy, dx);
       const d = ((Math.round(a / (Math.PI / 3)) % 6) + 6) % 6;
@@ -43,6 +60,7 @@ export class Input {
     if (ae && ae !== document.body && ae.blur) ae.blur();
 
     if (c === 'KeyP' || c === 'Escape') { if (!e.repeat) g.togglePause(); return; }
+    if (c === 'KeyV') { if (!e.repeat) g.cycleCamera(); return; }
     if (g.state !== 'playing') {
       if (c === 'Enter' && !e.repeat) {
         if (g.state === 'title') g.action('play');
@@ -51,7 +69,10 @@ export class Input {
       return;
     }
 
-    if (c in KEY_DIRS) { g.queueDir(KEY_DIRS[c]); return; }
+    if (g.firstPerson) {
+      if (c in FP_KEYS) { if (!e.repeat) g.turnRelative(FP_KEYS[c]); return; }
+    } else if (c in KEY_DIRS) { g.queueDir(KEY_DIRS[c]); return; }
+
     switch (c) {
       case 'ArrowRight': this.lastH = 0; g.queueDir(0); return;
       case 'ArrowLeft': this.lastH = 3; g.queueDir(3); return;

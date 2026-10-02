@@ -110,7 +110,9 @@ export class Assets {
     this.coinMat.customProgramCacheKey = () => 'spinning-coin';
 
     this.floorGeo = new THREE.CylinderGeometry(R * 0.97, R * 0.97, 0.2, 6).translate(0, -0.1, 0);
-    this.wallGeo = new THREE.CylinderGeometry(R * 0.95, R * 1.0, 1.4, 6).translate(0, 0.7, 0);
+    // Unit-height wall; ChunkView scales it by the configurable wall height.
+    this.wallGeo = new THREE.CylinderGeometry(R * 0.95, R * 1.0, 1, 6).translate(0, 0.5, 0);
+    this.wallHeight = CONFIG.VIEW.wallHeight;
     this.coinGeo = new THREE.CylinderGeometry(0.26, 0.26, 0.06, 16).rotateX(Math.PI / 2);
     this.pileGeo = new THREE.CylinderGeometry(0.18, 0.46, 0.34, 10).translate(0, -0.28, 0);
 

@@ -25,8 +25,8 @@ function rollEnemy(rng, dist) {
 }
 
 // Full deterministic base state of a chunk: layout + coins + pickups + spawn markers.
-export function buildChunk(worldSeed, cq, cr) {
-  const m = generateMaze(worldSeed, cq, cr);
+export function buildChunk(worldSeed, cq, cr, generatorId) {
+  const m = generateMaze(worldSeed, cq, cr, generatorId);
   const { rng, type, tier } = m;
   const G = CONFIG.GEN;
   const N = S * S;

@@ -34,7 +34,7 @@ export class EntityViews {
     const [px, pz] = toWorld(fq, fr);
     this.player.position.set(px, p.moving ? Math.abs(Math.sin(time * 16)) * 0.05 : 0, pz);
     this.player.rotation.y = lerpAngle(this.player.rotation.y, -dirAngle(p.facing), k);
-    this.player.visible = p.invuln <= 0 || Math.floor(time * 14) % 2 === 0;
+    this.player.visible = !game.firstPerson && (p.invuln <= 0 || Math.floor(time * 14) % 2 === 0);
 
     // Enemies.
     const seen = new Set();

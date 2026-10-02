@@ -14,11 +14,12 @@ export class Player {
     this.lives = CONFIG.START_LIVES;
     this.invuln = 0;
     this.speed = CONFIG.PLAYER_SPEED;
+    this.autoCorner = false;      // follow single-exit bends (first-person mode)
   }
 
-  queue(d) {
+  queue(d, buffer = CONFIG.TURN_BUFFER) {
     this.buffered = d;
-    this.bufferTimer = CONFIG.TURN_BUFFER;
+    this.bufferTimer = buffer;
     if (!this.moving) this.facing = d;
   }
 
@@ -59,6 +60,17 @@ export class Player {
     if (d < 0 && this.dir >= 0) {
       const [q, r] = neighbor(this.cq, this.cr, this.dir);
       if (world.isWalkable(q, r)) d = this.dir;
+    }
+    if (d < 0 && this.dir >= 0 && this.autoCorner) {
+      // Blocked ahead: if exactly one non-reverse exit exists, take it.
+      const back = opposite(this.dir);
+      let only = -1, n = 0;
+      for (let k = 0; k < 6; k++) {
+        if (k === back || k === this.dir) continue;
+        const [q, r] = neighbor(this.cq, this.cr, k);
+        if (world.isWalkable(q, r)) { only = k; n++; }
+      }
+      if (n === 1) d = only;
     }
     if (d < 0) { this.dir = -1; return false; }
     this.dir = d;

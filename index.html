@@ -30,6 +30,10 @@
       <div id="distance">Depth 0</div>
     </div>
     <button id="pause-btn" aria-label="Pause">❚❚</button>
+    <div id="fp-controls">
+      <button id="fp-left" aria-label="Turn left">◀</button>
+      <button id="fp-right" aria-label="Turn right">▶</button>
+    </div>
     <div id="hud-br">
       <div id="inventory">
         <button class="slot" data-slot="0"><span class="key">1</span><span class="icon">💣</span><span class="count">0</span></button>
@@ -52,6 +56,7 @@
       <div class="help">
         <div><b>Move:</b> Q/W · E · A · D · Z · X/C &nbsp;(or arrows) &nbsp;·&nbsp; swipe on touch</div>
         <div><b>Explosive:</b> Space deploy · Tab / 1–3 select</div>
+        <div><b>Camera:</b> V cycles views · First person: ←/→ turn, ↑ go, ↓ turn back</div>
         <div><b>Pause:</b> P / Esc</div>
         <div class="tip">Coins never return. Blasts destroy coins — and hurt you.</div>
       </div>
@@ -79,6 +84,7 @@
         <tr><td>Coins collected</td><td id="go-coins">0</td></tr>
         <tr><td>Coins destroyed</td><td id="go-wasted">0</td></tr>
         <tr><td>Creatures destroyed</td><td id="go-kills">0</td></tr>
+        <tr><td>Tomb layout</td><td id="go-layout"></td></tr>
       </table>
       <button data-action="restart">Descend Again</button>
       <button data-action="quit">Title</button>
@@ -88,19 +94,40 @@
   <div id="screen-settings" class="screen hidden">
     <div class="panel">
       <h2>Settings</h2>
-      <label class="row">Volume <input id="set-volume" type="range" min="0" max="1" step="0.05"></label>
-      <label class="row">Camera
-        <select id="set-camera">
+      <label class="row"><span>Volume <em data-val="volume"></em></span>
+        <input data-setting="volume" type="range" min="0" max="1" step="0.05"></label>
+      <label class="row"><span>Camera</span>
+        <select data-setting="camera">
           <option value="perspective">Perspective</option>
           <option value="ortho">Orthographic</option>
+          <option value="fps">First person</option>
         </select>
       </label>
-      <label class="row">Touch buttons
-        <select id="set-touch">
+      <label class="row"><span>Tomb layout <em>(next run)</em></span>
+        <select id="set-generator" data-setting="generator"></select>
+      </label>
+
+      <h3>View</h3>
+      <label class="row"><span>Camera tilt <em data-val="tilt"></em></span>
+        <input data-setting="tilt" type="range" min="10" max="75" step="1"></label>
+      <label class="row"><span>Camera distance <em data-val="distance"></em></span>
+        <input data-setting="distance" type="range" min="10" max="32" step="1"></label>
+      <label class="row"><span>Field of view <em data-val="fov"></em></span>
+        <input data-setting="fov" type="range" min="30" max="80" step="1"></label>
+      <label class="row"><span>First-person FOV <em data-val="fpFov"></em></span>
+        <input data-setting="fpFov" type="range" min="50" max="100" step="1"></label>
+      <label class="row"><span>Wall height <em data-val="wallHeight"></em></span>
+        <input data-setting="wallHeight" type="range" min="0.4" max="2.6" step="0.1"></label>
+      <label class="row"><span>View distance <em data-val="fog"></em></span>
+        <input data-setting="fog" type="range" min="0.5" max="1.8" step="0.05"></label>
+
+      <label class="row"><span>Touch buttons</span>
+        <select data-setting="touch">
           <option value="right">Right side</option>
           <option value="left">Left side</option>
         </select>
       </label>
+      <button data-action="settings-reset-view">Reset view</button>
       <button data-action="settings-back">Back</button>
     </div>
   </div>
